@@ -5,7 +5,21 @@ import time as _time
 import webbrowser as _webbrowser
 import os as _os
 import subprocess as _subprocess
+import random as _random
 class Time:
+    def random_time(method=12, with_sec=True):
+        if method == 12:
+            hours = [n for n in range(1, 13)]
+        else:
+            hours = [n for n in range(24)]
+        result = f"{_random.choice(hours):02}:{_random.randint(0, 59):02}"
+        if with_sec:
+            result += f':{_random.randint(0, 59):02}'
+        return result
+    def minus_clock(time_str1, time_str2):
+        t1 = Time.reverse_many_hms(time_str1)
+        t2 = Time.reverse_many_hms(time_str2)
+        return Time.how_many_hms_in_s(abs(t1-t2))
     """convert time to type_output"""
     def convert_to_iterable_and_int(time_str, type_output=tuple):
         """Convert 'HH:MM:SS' string to an iterable of ints. ex: '01:30:45' -> (1, 30, 45)"""
@@ -37,7 +51,8 @@ don't write repeated name."""
                 _time.sleep(duration)
                 if action:
                     action()
-            _threading.Thread(name=name, target=v, daemon=True).start()
+            a = _threading.Thread(name=name, target=v, daemon=True)
+            a.start()
 class Apps:
     def create_app(path, icon=None):
         """Build a standalone .exe from a .py file using PyInstaller, then clean up build files."""
@@ -85,6 +100,41 @@ class Files:
             b.write(new_text.replace('\n\n', '\n'))
 class GUI:
     class CustomTk:
+        def console_nums(master, per_row=3, entry_to_insert=None, font=('arial', 20), text_color='white'):
+            result = _ctk.CTkFrame(master)
+            def create_button(text):
+                if entry_to_insert:
+                    return _ctk.CTkButton(result, text=text, font=font, text_color=text_color, command=lambda: entry_to_insert.insert('end', text))
+                return _ctk.CTkButton(result, text=text, font=font, text_color=text_color)
+            buttons = [create_button(str(n)) for n in range(10)]
+            GUI.CustomTk.tidy_up(buttons, per_row=per_row)
+            return result
+        class Timer:
+            def __init__(self, duration, obj, start_icon='start', stop_icon='stop', when_finish=None):
+                self.duration = duration
+                self.resume = self.duration > 0
+                self.obj = obj
+                self.button = _ctk.CTkButton(obj.master, text=start_icon, command=self.start)
+                self.start_icon = start_icon
+                self.stop_icon = stop_icon
+                self.timers = 0
+                self.when_finish = when_finish
+                if self.when_finish and self.duration == 0:
+                    self.when_finish()
+            def start(self):
+                self.button.configure(command=self.stop, text=self.stop_icon)
+                def m():
+                    while self.resume:
+                        self.duration -= 1
+                        self.obj.configure(text=Time.how_many_hms_in_s(self.duration))
+                        _time.sleep(1)
+                Other.in_bg(f'{id(self.obj)}', 0, m)
+            def stop(self):
+                self.button.configure(command=self.resume_timer, text=self.start_icon)
+                self.resume = False
+            def resume_timer(self):
+                self.resume = self.duration > 0
+                self.start()
         def show_hide_button(entry, show_ico="show", hide_ico='hide', hide_with="*"):
             entry.configure(show=hide_with)
             btn = _ctk.CTkButton(entry.master, text=show_ico, font=("arial", 20))
@@ -110,46 +160,53 @@ class GUI:
             obj.bind('<B1-Motion>', lambda e:obj.place(x=master.winfo_pointerx()-width//2, y=master.winfo_pointery()-height//2))
         def good_size(widgets):
             """resize widgets with the biggest size (height, width)"""
-            width = [i.winfo_reqwidth() for i in widgets]
-            height = [i.winfo_reqheight() for i in widgets]
-            for i in widgets:
-                i.configure(width=max(width), height=max(height))
+            def m():
+                width = [i.winfo_reqwidth() for i in widgets]
+                height = [i.winfo_reqheight() for i in widgets]
+                for i in widgets:
+                    i.configure(width=max(width), height=max(height))
+            Other.in_bg('good size', 0, m)
         def tidy_up(widgets, per_row, start_from_row=0, start_from_column=0, distance_down=5, distance_across=5):
-            """
-            Arrange widgets in a grid with a fixed number per row.
-            """
-            master = widgets[0].master
-            for i in range(start_from_row+1):
-                master.grid_rowconfigure(i, minsize=widgets[0].winfo_reqheight())
-            for i in range(start_from_column+1):
-                master.grid_columnconfigure(i, minsize=widgets[0].winfo_reqwidth())
-            columns = start_from_column
-            rows = start_from_row
-            allowed_num = 0
-            multy = Math.number_multiplies(per_row, len(widgets), set)
-            for w in widgets:
-                w.grid(column=columns, row=rows, padx=distance_across, pady=distance_down)
-                allowed_num += 1
-                columns += 1
-                if allowed_num in multy:
-                    rows += 1
-                    columns = start_from_column
+            def m():
+                """
+                Arrange widgets in a grid with a fixed number per row.
+                """
+                master = widgets[0].master
+                for i in range(start_from_row+1):
+                    master.grid_rowconfigure(i, minsize=widgets[0].winfo_reqheight())
+                for i in range(start_from_column+1):
+                    master.grid_columnconfigure(i, minsize=widgets[0].winfo_reqwidth())
+                columns = start_from_column
+                rows = start_from_row
+                allowed_num = 0
+                multy = Math.number_multiplies(per_row, len(widgets), set)
+                for w in widgets:
+                    w.grid(column=columns, row=rows, padx=distance_across, pady=distance_down)
+                    allowed_num += 1
+                    columns += 1
+                    if allowed_num in multy:
+                        rows += 1
+                        columns = start_from_column
+            Other.in_bg('tidy up func', len(widgets) // 1000, m)
         def all_objects(master):
             """Return a flat list of all child widgets in master."""
             result = []
             for i in master.winfo_children():
-                if isinstance(i, list):
+                if isinstance(i, (_ctk.CTkFrame, _ctk.CTkScrollableFrame)):
                     result.extend(all_objects(i))
                 else:
                     result.append(i)
             return result
         def edit_all_widgets_texts(master, font='arial', size=20, text_color='lightblue', bg=''):
             """Apply font, text color, and background to all child widgets in master."""
-            for i in master.winfo_children():
-                if bg:
-                    i.configure(font=(font, size), text_color=text_color, fg_color=bg)
-                else:
-                    i.configure(font=(font, size), text_color=text_color, fg_color=None)
+            def m():
+                for i in master.winfo_children():
+                        if isinstance(i, (_ctk.CTkLabel, _ctk.CTkButton)):
+                            if bg:
+                                i.configure(font=(font, size), text_color=text_color, fg_color=bg)
+                            else:
+                                i.configure(font=(font, size), text_color=text_color, fg_color='transparent')
+            Other.in_bg('edit_all_texts', 0.5, m)
         def info(widget, information, font='arial', size=20, bg='', hide_after=5):
             """Show a tooltip label below widget on hover, auto-hide after hide_after seconds."""
             if bg:
@@ -249,6 +306,16 @@ class String:
             index[1] = index[1] - 1
         return self.text[index[0]:index[1]]
 class Iterable:
+    def search_iterable(iterable, search_with, ignore_case=True):
+        result = []
+        for o in iterable:
+            if ignore_case:
+                if str(search_with).lower() in str(o).lower():
+                    result.append(o)
+            else:
+                if str(search_with) in str(o):
+                    result.append(o)
+        return result
     def get_circular_index(iterable, index, return_obj=False):
         """
     Return the element at 'index' using modulo to wrap around if index >= len(iterable).
@@ -319,6 +386,13 @@ result = ['Olivia', 'mark']"""
             result += f"{i}: {dec[i]}\n"
         return result.strip()
 class Math:
+    def int_or_float(num):
+        try:
+            float(num)
+            assert str(num)[-1] != '.'
+            return True
+        except:
+            return False
     def iter_num(iterable):
         """Return sum, average, max, and min of an iterable as a dict."""
         return {'sum': sum(iterable), 'average': sum(iterable) / len(iterable), 'max': max(iterable), 'min': min(iterable)}
