@@ -1,5 +1,4 @@
 # pypower (New Version)
-Update tidy_up logic for better grid alignment
 Note: this lib is updated everytime
 
 
@@ -25,3 +24,7 @@ data['buttons'][5].configure(fg_color="green")
 root.mainloop()```
 
 https://github.com/user-attachments/assets/794de796-4692-4a1d-a6d5-f8a9ab3b2c1c
+
+
+https://github.com/user-attachments/assets/ce1d72d1-bf0a-48c6-9f20-1a5802c184c6
+
