@@ -2,7 +2,6 @@
 Note: this lib is updated everytime
 
 
-
 ## 🛡️ License & Legal Protection
 This project is protected by the **Creative Commons BY-NC-SA 4.0** license.
 - ✅ **Free** for personal and educational use.
@@ -23,8 +22,5 @@ data['buttons'][4].configure(fg_color="red", command=lambda: entry.delete(0, 'en
 data['buttons'][5].configure(fg_color="green")
 root.mainloop()```
 
-https://github.com/user-attachments/assets/794de796-4692-4a1d-a6d5-f8a9ab3b2c1c
 
-
-https://github.com/user-attachments/assets/ce1d72d1-bf0a-48c6-9f20-1a5802c184c6
-
+https://github.com/user-attachments/assets/a7959006-5daa-44c1-bf18-084238fe2228
