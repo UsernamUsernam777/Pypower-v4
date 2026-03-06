@@ -100,6 +100,10 @@ class Files:
             b.write(new_text.replace('\n\n', '\n'))
 class GUI:
     class CustomTk:
+        def sync_entry_with_label(entry, label):
+            var = _ctk.StringVar()
+            var.trace_add('write', lambda *args:label.configure(text=entry.get()))
+            entry.configure(textvariable=var)
         def console_nums(master, per_row=3, entry_to_insert=None, font=('arial', 20), text_color='white'):
             result = _ctk.CTkFrame(master)
             def create_button(text):
