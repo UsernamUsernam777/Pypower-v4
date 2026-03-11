@@ -280,7 +280,7 @@ class GUI:
                 inf.after(hide_after*1000, inf.place_forget)
             widget.bind('<Enter>', show)
         def mouse_wheel_num(entry, end, step=1):
-            """Scroll through numbers in range [start, end] inside an entry with the mouse wheel."""
+            """Scroll through numbers inside an entry with the mouse wheel."""
             def f(e):
                 if Math.int_or_float(entry.get()):
                     a = float(entry.get())
