@@ -34,9 +34,7 @@ def calc():
         result.delete(0, 'end')
         result.insert(0, res)
     except:
-        a = ctk.CTkLabel(main, text='Error!', font=('arial', 60), text_color='red')
-        a.pack()
-        a.after(1000, a.pack_forget)
+        pypower.GUI.CustomTk.show_hide_message(main, 'Error!')
 syms['buttons'][-1].configure(command=calc)
 for i in main.winfo_children()[2:]:
     pypower.GUI.CustomTk.move(i)
