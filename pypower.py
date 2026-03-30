@@ -6,18 +6,7 @@ import time as _time
 import webbrowser as _webbrowser
 import os as _os
 import subprocess as _subprocess
-import random as _random
 class Time:
-    @staticmethod
-    def random_time(method=12, with_sec=True):
-        if method == 12:
-            hours = list(range(1, 13))
-        else:
-            hours = list(range(24))
-        result = f"{_random.choice(hours):02}:{_random.randint(0, 59):02}"
-        if with_sec:
-            result += f':{_random.randint(0, 59):02}'
-        return result
     @staticmethod
     def minus_clock(time_str1, time_str2):
         t1 = Time.reverse_many_hms(time_str1)
@@ -31,19 +20,15 @@ class Time:
     @staticmethod
     def how_many_hms_in_s(sec):
         """how many hours, minutes and seconds in seconds"""
-        hours = sec // 3600
-        minutes = (sec % 3600) // 60
-        seconds = (sec % 3600) % 60
+        hours = int(sec // 3600)
+        minutes = int((sec % 3600) // 60)
+        seconds = int((sec % 3600) % 60)
         return f"{hours:02}:{minutes:02}:{seconds:02}"
     @staticmethod
     def reverse_many_hms(time_str):
         result = Time.convert_to_iterable_and_int(time_str)
         return (result[0]*3600) + (result[1]*60) + result[2]
 class Other:
-    @staticmethod
-    def copy_pypower(path):
-        """Copy the contents of pypower.py to the clipboard."""
-        _pyperclip.copy(Files.read_write_txt_file(path))
     @staticmethod
     def search_google(text):
         """Open a new browser tab with a Google search for text."""
@@ -66,6 +51,7 @@ class Apps:
     def create_app(path, icon=None, move_to_folder=None):
         """Build a standalone .exe from a .py file using PyInstaller, then clean up build files."""
         def mainloop():
+            from shutil import rmtree
             if not _os.path.exists(path):
                 print('Error!')
             else:
@@ -82,8 +68,8 @@ class Apps:
                 if _os.path.exists(_os.path.join('dist', n_exe)):
                     _os.replace(_os.path.join('dist', n_exe), _os.path.join(pj, n_exe))
                 if _os.path.exists(_os.path.join(pj, n_exe)):
-                    _os.system('rmdir /s /q dist')
-                    _os.system('rmdir /s /q build')
+                    rmtree('dist', ignore_errors=True)
+                    rmtree('build', ignore_errors=True)
                     _os.remove(n_spec)
                 if _os.path.exists(path.replace('.py', '.exe')):
                     if move_to_folder:
@@ -95,15 +81,16 @@ class Apps:
         Other.in_bg('create app loading ...', 1, mainloop)
 class Files:
     @staticmethod
-    def read_write_txt_file(file_txt, do='read', text=None, create_if_no=True):
+    def read_write_txt_file(file_txt, do='read', text=None, create_if_no=False):
         if create_if_no:
             Files.make_if_not_exists(file_txt, 'txt')
         if do == 'read':
             with open(file_txt, 'r', encoding='utf-8') as f:
                 return f.read().strip()
         else:
-            with open(file_txt, 'w', encoding='utf-8') as f:
-                f.write(text or '')
+            if _os.path.exists(file_txt):
+                with open(file_txt, 'w', encoding='utf-8') as f:
+                    f.write(text or '')
     @staticmethod
     def make_if_not_exists(path, type=''):
         """Create a folder (type='') or empty file at path if it doesn't exist."""
@@ -128,8 +115,81 @@ class Files:
                 new_text = old_text + '\n' + text
             b.write(new_text.replace('\n\n', '\n'))
 class GUI:
-    @staticmethod
     class CustomTk:
+        def copy_style(master, all_objects=True):
+            if all_objects:
+                wids = GUI.CustomTk.has_text_iterable(GUI.CustomTk.all_objects(master))
+            else:
+                wids = GUI.CustomTk.has_text_iterable(master.winfo_children())
+            def alls():
+                in_mode = True
+                def c(obj1, obj2):
+                    atts = {}
+                    for i in ['fg_color', 'bg_color', 'font', 'text_color']:
+                        atts[i] = obj1.cget(i)
+                    obj2.configure(**atts)
+                new = []
+                def fi(e):
+                    nonlocal in_mode
+                    if in_mode:
+                        new.append(e.widget.master)
+                        if len(new) == 2:
+                            c(new[0], new[1])
+                            new.clear()
+                            in_mode = False
+                for i in wids:
+                    i.bind('<Button-1>', fi)
+            btn = _ctk.CTkButton(master, text='copy style', command=alls)
+            return btn
+        def dont_enter(entry, iterable):
+            if entry.cget('textvariable'):
+                check = entry.cget('textvariable')
+            else:
+                check = _ctk.StringVar()
+                entry.configure(textvariable=check)
+            def c(*args):
+                if check.get()[-1] in iterable:
+                    entry.delete(entry.index('insert') - 1)
+            check.trace_add('write', c)
+        def len_entry(entry, text_with_num='', with_spaces=True):
+            if entry.cget('textvariable'):
+                check = entry.cget('textvariable')
+            else:
+                check = _ctk.StringVar()
+                entry.configure(textvariable=check)
+            label = _ctk.CTkLabel(entry.master, text=f'{text_with_num}0')
+            def c(*args):
+                lenth_text = len(check.get()) if with_spaces else len(check.get().replace(' ', ''))
+                lenth_all = f"{text_with_num}{lenth_text}"
+                label.configure(text=lenth_all)
+            check.trace_add('write', c)
+            return label
+        def label_widget(obj, message, side='above', value=0, text_color='black', font=('arial', 10), fg_color=None):
+            l = _ctk.CTkLabel(obj.master, text=message, text_color=text_color, font=font, fg_color=fg_color)
+            def m():
+                l.lift()
+                if side == 'above':
+                    l.place(x=obj.winfo_x(), y=obj.winfo_y()-obj.winfo_height()*2)
+                else:
+                    l.place(x=obj.winfo_x(), y=obj.winfo_y()+obj.winfo_height())
+            obj.master.after(20, m)
+        def manager_same(obj1, obj2):
+            t = obj1.winfo_manager()
+            if t == 'pack':
+                n = obj1.pack_info()
+                n.pop('in')
+                obj2.pack(**n)
+            elif t == 'place':
+                n = obj1.place_info()
+                for i in ['width', 'height', 'relwidth', 'relheight', 'in']:
+                    n.pop(i)
+                for i in n:
+                    if n[i].isdigit():
+                        n[i] = int(n[i])
+                obj2.place(**n)
+            else:
+                n = obj1.grid_info()
+                obj2.grid(**n)
         def entry_label(obj):
             is_label = isinstance(obj, _ctk.CTkLabel)
             event = "<Shift-Double-Button-1>" if is_label else "<Return>"
@@ -147,17 +207,20 @@ class GUI:
                 def m():
                     x = obj.winfo_x()
                     y = obj.winfo_y()
-                    a.insert(0, obj.cget('text')) if is_label else a.configure(text=obj.get())
+                    if is_label:
+                        a.insert(0, obj.cget('text'))
+                    else:
+                        a.configure(text=obj.get())
                     a.place(x=x, y=y)
                     obj.destroy()
-                GUI.CustomTk.entry_label(a)
+                    GUI.CustomTk.entry_label(a)
                 obj.after(200, m)
             obj.bind(event, convert)
         def options(widget, names, commands, font=('arial', 10), text_color='white'):
-            a = ctk.CTkFrame(widget.master)
+            a = _ctk.CTkFrame(widget.master)
             from itertools import zip_longest
             for i, e in zip_longest(names, commands):
-                l = ctk.CTkButton(a, text=i, text_color=text_color, font=font, width=len(i)+50, height=font[1])
+                l = _ctk.CTkButton(a, text=i, text_color=text_color, font=font, width=len(i)+50, height=font[1])
                 l.pack()
                 l.configure(command=e)
             def show(e):
@@ -167,44 +230,27 @@ class GUI:
                 widget.after(200, m)
             widget.bind("<Button-3>", show)
             widget.master.bind("<Button-1>", lambda e:a.place_forget())
-        def sort_colors(widgets, per_row_color, color_of='fg_color'):
-            b = 0
-            colors = set([w.cget(color_of) for w in widgets])
-            wids = []
-            for i in colors:
-                new = []
-                for o in widgets:
-                    if o.cget(color_of) == i:
-                        new.append(o)
-                wids.append(new)
-            for i in wids:
-                GUI.CustomTk.tidy_up(i, per_row_color, start_column=b)
-                b += per_row_color
         def table(master, dic_data, font=('arial', 30), text_color='black', buttons=False, widgets_frame=False, autofit=False):
             a = _ctk.CTkScrollableFrame(master)
-            b = 0
             widgets = []
-            for i in dic_data:
-                column = []
+            col_num = 0
+            for k in dic_data:
+                col = []
                 if buttons:
-                    obj = _ctk.CTkButton(a, text=str(i), font=font, text_color=text_color)
+                    col.append(_ctk.CTkButton(a, text=k, font=font, text_color=text_color))
                 else:
-                    obj = _ctk.CTkLabel(a, text=str(i), font=font, text_color=text_color)
-                column.append(obj)
-                if widgets_frame or autofit:
-                    widgets.append(obj)
-                for v in dic_data[i]:
+                    col.append(_ctk.CTkLabel(a, text=k, font=font, text_color=text_color))
+                for v in dic_data[k]:
                     if buttons:
-                        obj = _ctk.CTkButton(a, text=str(v), font=font, text_color=text_color)
+                        col.append(_ctk.CTkButton(a, text=v, font=font, text_color=text_color))
                     else:
-                        obj = _ctk.CTkLabel(a, text=str(v), font=font, text_color=text_color)
-                    column.append(obj)
-                    if widgets_frame or autofit:
-                        widgets.append(obj)
-                GUI.CustomTk.tidy_up(column, per_row=1, start_column=b, padx=7)
-                b += 1
-            if autofit:
-                GUI.CustomTk.good_size(widgets)
+                        col.append(_ctk.CTkLabel(a, text=v, font=font, text_color=text_color))
+                GUI.CustomTk.tidy_up(col, per_row=1, start_column=col_num)
+                col_num += 1
+                if autofit:
+                    GUI.CustomTk.good_size(col)
+                if widgets_frame:
+                    widgets.extend(col)
             if widgets_frame:
                 return {'widgets': widgets, 'frame': a}
             return a
@@ -217,9 +263,9 @@ class GUI:
                 obj.after(300, lambda:new.place(x=obj.winfo_x(), y=obj.winfo_y()+obj.winfo_height()))
                 GUI.CustomTk.duplicate_double_click(new)
             obj.bind('<Double-Button-1>', alls)
-        def clone_widget(old_widget, master=None):
-            new = old_widget.__class__(master or old_widget.master)
-            attr = old_widget.__dict__
+        def clone_widget(widget, master=None):
+            new = widget.__class__(master or widget.master)
+            attr = widget.__dict__
             for i in attr:
                 try:
                     if i[0] == '_':
@@ -229,10 +275,12 @@ class GUI:
                     new.configure(**new_config)
                 except:
                     pass
+            new.configure(width=attr['_current_width'], height=attr['_current_height'])
             return new
         def add_texts_to_file(master, file, title):
             Files.make_if_not_exists(file, 'txt')
-            Files.append_to_file(file, title + str(GUI.CustomTk.has_text_iterable(GUI.CustomTk.all_objects(master), text_obj=True)['texts']))
+            new = str(GUI.CustomTk.has_text_iterable(GUI.CustomTk.all_objects(master), text_obj=True)['texts'])
+            Files.append_to_file(file, title + String(new).replace_many(['[', ']', ', '], ['', '', '\n']))
         def has_text(obj, with_empty=False):
             try:
                 obj.cget('text')
@@ -258,7 +306,7 @@ class GUI:
                 a.place(x=x, y=y)
             else:
                 a.pack()
-            a.after(hide_after*1000, a.destroy)
+            a.after(int(hide_after*1000), a.destroy)
             return a
         def change_mode(master, light_icon='light', dark_icon='dark'):
             def c():
@@ -275,13 +323,11 @@ class GUI:
                 check = entry.cget('textvariable')
             else:
                 check = _ctk.StringVar()
+                entry.configure(textvariable=check)
             def c(*args):
                 if len(entry.get()) > limit:
-                    entry.delete(len(entry.get())-1)
-            entry.configure(textvariable=check)
+                    entry.delete(entry.index('insert') - 1)
             check.trace_add('write', c)
-        def disable_button(button):
-            button.configure(fg_color='#e1e3e1', text_color='white', command=None, hover=False)
         def sync_entry_with_label(entry, label):
             if entry.cget('textvariable'):
                 var = entry.cget('textvariable')
@@ -343,7 +389,7 @@ class GUI:
                     btn.configure(text=show_ico)
             btn.configure(command=change)
             return btn
-        def move(obj, action_when_move=None):
+        def move(obj, action_when_move=None, lift_when_move=False):
             master = obj.master
             def m(e):
                 x = obj.winfo_x()
@@ -356,7 +402,9 @@ class GUI:
                 mouse_x = master.winfo_pointerx() - master.winfo_rootx() - width//2
                 mouse_y = master.winfo_pointery() - master.winfo_rooty() - height//2
                 obj.place(x=mouse_x, y=mouse_y)
-                if action_when_move:    
+                if lift_when_move:
+                    obj.lift()
+                if action_when_move:
                     action_when_move()
             obj.bind('<B1-Motion>', m)
         def good_size(widgets):
@@ -366,29 +414,40 @@ class GUI:
                 height = [i.winfo_reqheight() for i in widgets]
                 for i in widgets:
                     i.configure(width=max(width), height=max(height))
-            widgets[0].master.after(500, m)
+            widgets[0].after(100, m)
+        def sort_colors(widgets, per_row_color, start_col=0, color_of='fg_color'):
+            sc = start_col
+            colors = set([w.cget(color_of) for w in widgets])
+            wids = []
+            for i in colors:
+                new = []
+                for o in widgets:
+                    if o.cget(color_of) == i:
+                        new.append(o)
+                wids.append(new)
+            for i in wids:
+               GUI.CustomTk.tidy_up(i, per_row_color, start_row=0, start_column=sc)
+               sc += per_row_color
         def tidy_up(widgets, per_row, start_row=0, start_column=0, padx=5, pady=5):
             master = widgets[0].master
-            def m():
-                """
-                Arrange widgets in a grid with a fixed number per row.
-                """
-                for i in range(start_row+1):
-                    master.grid_rowconfigure(i, minsize=widgets[0].winfo_reqheight())
-                for i in range(start_column+1):
-                    master.grid_columnconfigure(i, minsize=widgets[0].winfo_reqwidth())
-                columns = start_column
-                rows = start_row
-                allowed_num = 0
-                multy = range(per_row, len(widgets)+1, per_row)
-                for w in widgets:
-                    w.grid(column=columns, row=rows, padx=padx, pady=pady)
-                    allowed_num += 1
-                    columns += 1
-                    if allowed_num in multy:
-                        rows += 1
-                        columns = start_column
-            master.after(len(widgets) // 1000, m)
+            """
+            Arrange widgets in a grid with a fixed number per row.
+            """
+            for i in range(start_row):
+                master.grid_rowconfigure(i, minsize=widgets[0].winfo_reqheight())
+            for i in range(start_column):
+                master.grid_columnconfigure(i, minsize=widgets[0].winfo_reqwidth())
+            columns = start_column
+            rows = start_row
+            allowed_num = 0
+            multy = range(per_row, len(widgets)+1, per_row)
+            for w in widgets:
+                w.grid(column=columns, row=rows, padx=padx, pady=pady)
+                allowed_num += 1
+                columns += 1
+                if allowed_num in multy:
+                    rows += 1
+                    columns = start_column
         def all_objects(master):
             """Return a flat list of all child widgets in master."""
             result = []
@@ -419,7 +478,7 @@ class GUI:
                 x = widget.winfo_x()
                 y = widget.winfo_y()
                 inf.after(500, lambda: inf.place(x=x, y=y+widget.winfo_height()))
-                inf.after(hide_after*1000, inf.place_forget)
+                inf.after(int(hide_after*1000), inf.place_forget)
             widget.bind('<Enter>', show)
         def mouse_wheel_num(entry, end, step=1):
             """Scroll through numbers inside an entry with the mouse wheel."""
@@ -436,26 +495,46 @@ class GUI:
                     entry.insert(0, round(new_num, 2))
             entry.bind("<MouseWheel>", f)
     class Turtle:
+        def moving(obj, keys, value=20, when_moving=None):
+            """insert keys with this order: [up, down, left, right]"""
+            def up():
+                obj.setheading(90)
+                obj.forward(value)
+                if when_moving:
+                    when_moving()
+            def down():
+                obj.setheading(270)
+                obj.forward(value)
+                if when_moving():
+                    when_moving()
+            def left():
+                obj.setheading(180)
+                obj.forward(value)
+                if when_moving:
+                    when_moving()
+            def right():
+                obj.setheading(0)
+                obj.forward(value)
+                if when_moving:
+                    when_moving()
+            for i, e in zip(keys, [up, down, left, right]):
+                obj.screen.onkeypress(e, i)
         def in_circle(turtle_obj, shape_as_func, how_many=10):
             """draw shape_as_func in circle"""
             for i in range(how_many):
                 shape_as_func()
                 turtle_obj.left(360/how_many)
-        def rock_bottom(window, obj, before_end=0):
+        def rock_bottom(window, obj, before_end=20, on_xy=False):
             x = window.window_width() // 2 - before_end
             y = window.window_height() // 2 - before_end
+            if on_xy:
+                if abs(obj.xcor()) >= abs(x):
+                    return 'x'
+                elif abs(obj.ycor()) >= abs(y):
+                    return 'y'
+                else:
+                    return ''
             return abs(obj.xcor()) >= abs(x) or abs(obj.ycor()) >= abs(y)
-        def move(obj, distance, direction='forward'):
-            """Move a Turtle object without drawing (pen up then down)."""
-            if direction in ['backward', 'forward']:
-                obj.penup()
-                if direction == 'forward':
-                    obj.fd(distance)
-                elif direction == 'backward':
-                    obj.bk(distance)
-                obj.pendown()
-            else:
-                print('Invalid direction!')
 class String:
     def __init__(self, text):
         self.text = text
@@ -498,7 +577,21 @@ class String:
                 e += 1
             result.append(self.text[i:e])
         return result
+    def line_if_in(self, string):
+        result = []
+        for i in self.split('\n'):
+            if string in i:
+                result.append(i)
+        return result
 class Iterable:
+    @staticmethod
+    def opponents(iterable, obj):
+        """takes iterable for 2 elements and if the obj == anyone, the function returns the other one"""
+        if obj == iterable[0]:
+            return iterable[1]
+        elif obj == iterable[1]:
+            return iterable[0]
+        return obj
     @staticmethod
     def flat_list(lst, type_to_flat=(list, set)):
         result = []
@@ -541,9 +634,14 @@ result = ['Olivia', 'mark']"""
             co.remove(co[index-1])
         return co
     @staticmethod
-    def all_in(main_iterable, iterable):
+    def all_any_in(main_iterable, iterable, any_all=all):
         """Checks if all unique elements of 'iterable' exist within 'main_iterable'."""
-        return set(iterable).issubset(set(main_iterable))
+        if any_all == any:
+            for i in set(iterable):
+                if i in set(main_iterable):
+                    return True
+        else:
+            return set(iterable).issubset(set(main_iterable))
     @staticmethod
     class Dict:
         def swap_dict(dic):
