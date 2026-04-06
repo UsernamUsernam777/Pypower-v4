@@ -1,8 +1,8 @@
 import customtkinter as _ctk
-from . import Math
-from . import Files
-from . import String
-from . import Iterable
+from . import Math as _Math
+from . import Files as __Files
+from . import String as _String
+from . import Iterable as _Iterable
 import ast as _ast
 class CustomTk:
     class Manager:
@@ -12,15 +12,15 @@ class CustomTk:
                 if n in dic:
                     dic.pop(n)
             for i in dic:
-                if Math.int_or_float(dic[i]):
+                if _Math.int_or_float(dic[i]):
                     dic[i] = float(dic[i])
             return dic
         def manager_with_data(obj, manager, dic):
             dic = CustomTk.Manager.clear_manager(dic)
             getattr(obj, manager)(**dic)
         def places_from_file(file, master):
-            Files.make_if_not_exists(file, 'txt')
-            dicts = String.between(Files.read_write_txt_file(file), '{', '}')
+            _Files.make_if_not_exists(file, 'txt')
+            dicts = _String.between(_Files.read_write_txt_file(file), '{', '}')
             if dicts:
                 for i in range(len(dicts)):
                     dicts[i] = _ast.literal_eval(dicts[i])
@@ -33,12 +33,12 @@ class CustomTk:
                 t = i.winfo_manager()
                 t = cl(getattr(i, f'{t}_info')())
                 s += str(t) + '\n'
-            Files.read_write_txt_file(file, 'write', s.strip('\n'), True)
+            _Files.read_write_txt_file(file, 'write', s.strip('\n'), True)
         def manager_same(obj1, obj2):
-            cl = CustomTk.Manager.clear_manager
             t = obj1.winfo_manager()
             if t:
-                n = cl(getattr(obj1, f'{t}_info')())
+                n = getattr(obj1, f'{t}_info')()
+                n = CustomTk.Manager.clear_manager(n)
                 getattr(obj2, f'{t}')(**n)
     def copy_style(master, all_objects=True):
         if all_objects:
@@ -161,33 +161,41 @@ class CustomTk:
         if widgets_frame:
             return {'widgets': widgets, 'frame': a}
         return a
-    def duplicate_double_click(obj, move=False):
+    def duplicate_double_click(widget, move=False):
         def alls(e):
-            new = CustomTk.clone_widget(obj)
+            if isinstance(obj, (_ctk.CTkFrame, _ctk.CTkScrollableFrame)):
+                new = CustomTk.copy_frame(widget)
+            else:
+                new = CustomTk.clone_widget_not_frame(widget)
             new.lift()
             if move:
                 CustomTk.move(new)
-            obj.after(300, lambda:new.place(x=obj.winfo_x(), y=obj.winfo_y()+obj.winfo_height()))
+            obj.after(300, lambda:new.place(x=widget.winfo_x(), y=widget.winfo_y()+widget.winfo_height()))
             CustomTk.duplicate_double_click(new)
-        obj.bind('<Double-Button-1>', alls)
-    def clone_widget(widget, master=None):
+        widget.bind('<Double-Button-1>', alls)
+    def clone_widget_not_frame(widget, master=None):
         new = widget.__class__(master or widget.master)
         attr = widget.__dict__
         for i in attr:
             try:
-                if i[0] == '_':
-                    new_config = {i[1:]: attr[i]}
-                else:
-                    new_config = {i: attr[i]}
+                new_config = {i.strip('_'): attr[i]}
                 new.configure(**new_config)
-            except:
+            except Exception as e:
                 pass
         new.configure(width=attr['_current_width'], height=attr['_current_height'])
         return new
+    def clone_frame(frame, master=None):
+        new_frame = GUI.CustomTk.clone_widget_not_frame(frame, master or frame.master)
+        for i in frame.winfo_children():
+            if isinstance(i, ctk.CTkFrame):
+                GUI.CustomTk.Manager.manager_same(i, clone_frame(i, new_frame))
+            else:
+                GUI.CustomTk.Manager.manager_same(i, GUI.CustomTk.clone_widget_not_frame(i, new_frame))
+        return new_frame
     def add_texts_to_file(master, file, title):
-        Files.make_if_not_exists(file, 'txt')
+        _Files.make_if_not_exists(file, 'txt')
         new = str(CustomTk.has_text_iterable(CustomTk.all_objects(master), text_obj=True)['texts'])
-        Files.append_to_file(file, title + String.replace_many(new, ['[', ']', ', '], ['', '', '\n']))
+        _Files.append_to_file(file, title + _String.replace_many(new, ['[', ']', ', '], ['', '', '\n']))
     def has_text(obj, with_empty=False):
         try:
             obj.cget('text')
@@ -221,8 +229,8 @@ class CustomTk:
         def c():
             icons = [dark_icon, light_icon]
             modes = ['Light', 'Dark']
-            _ctk.set_appearance_mode(Iterable.opponents(modes, _ctk.get_appearance_mode()))
-            button.configure(text=Iterable.opponents(icons, button.cget('text')))
+            _ctk.set_appearance_mode(_Iterable.opponents(modes, _ctk.get_appearance_mode()))
+            button.configure(text=_Iterable.opponents(icons, button.cget('text')))
         button = _ctk.CTkButton(master, text=dark_icon, command=c, font=('arial', 30))
         return button
     def limit_len(entry, limit):
@@ -400,7 +408,7 @@ class CustomTk:
     def mouse_wheel_num(entry, end, step=1):
         """Scroll through numbers inside an entry with the mouse wheel."""
         def f(e):
-            if Math.int_or_float(entry.get()):
+            if _Math.int_or_float(entry.get()):
                 a = float(entry.get())
                 entry.delete(0, 'end')
                 if e.delta >= 1:
